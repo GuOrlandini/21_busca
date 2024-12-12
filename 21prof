@@ -1,0 +1,123 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+#define MAX_SCORE 21
+#define DEALER_STOP 17
+
+// Função para calcular a pontuação total de uma mão
+int calcular_pontuacao(int *mao, int tamanho) {
+    int total = 0;
+    for (int i = 0; i < tamanho; i++) {
+        total += mao[i];
+    }
+    return total;
+}
+
+// Busca em profundidade para determinar a melhor decisão do dealer
+int busca_profundidade(int *mao_dealer, int tamanho, int *cartas_restantes, int n_cartas, int limite) {
+    int pontuacao_atual = calcular_pontuacao(mao_dealer, tamanho);
+
+    // Estado terminal: dealer para ou ultrapassa 21
+    if (pontuacao_atual >= limite || pontuacao_atual > MAX_SCORE) {
+        return pontuacao_atual;
+    }
+
+    int melhor_pontuacao = pontuacao_atual;
+    for (int i = 0; i < n_cartas; i++) {
+        if (cartas_restantes[i] == -1) continue; // Carta já usada
+
+        // Simular compra de uma carta
+        int carta = cartas_restantes[i];
+        cartas_restantes[i] = -1; // Marcar como usada
+        mao_dealer[tamanho] = carta;
+
+        // Recursão para explorar o próximo estado
+        int resultado = busca_profundidade(mao_dealer, tamanho + 1, cartas_restantes, n_cartas, limite);
+
+        // Atualizar a melhor pontuação
+        if (resultado > melhor_pontuacao && resultado <= MAX_SCORE) {
+            melhor_pontuacao = resultado;
+        }
+
+        // Reverter a ação (backtracking)
+        cartas_restantes[i] = carta;
+    }
+    return melhor_pontuacao;
+}
+
+// Função principal
+int main() {
+    srand(time(NULL));
+
+    int cartas_restantes[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    int n_cartas = sizeof(cartas_restantes) / sizeof(cartas_restantes[0]);
+
+    // Mão do jogador e do dealer
+    int mao_jogador[10], mao_dealer[10];
+    int tamanho_jogador = 0, tamanho_dealer = 0;
+
+    // Distribuir cartas iniciais
+    mao_jogador[tamanho_jogador++] = cartas_restantes[rand() % n_cartas];
+    mao_jogador[tamanho_jogador++] = cartas_restantes[rand() % n_cartas];
+    mao_dealer[tamanho_dealer++] = cartas_restantes[rand() % n_cartas];
+    mao_dealer[tamanho_dealer++] = cartas_restantes[rand() % n_cartas];
+
+    printf("Você comprou as cartas: %d e %d\n", mao_jogador[0], mao_jogador[1]);
+    printf("Sua pontuação inicial: %d\n", calcular_pontuacao(mao_jogador, tamanho_jogador));
+    printf("Carta visível do dealer: %d\n", mao_dealer[0]);
+
+    // Turno do jogador
+    while (1) {
+        printf("Escolha: 1 (Pedir carta) ou 2 (Parar): ");
+        int escolha;
+        scanf("%d", &escolha);
+
+        if (escolha == 1) {
+            // Jogador pede uma carta
+            int carta = cartas_restantes[rand() % n_cartas];
+            mao_jogador[tamanho_jogador++] = carta;
+            printf("Você comprou: %d\n", carta);
+            printf("Sua pontuação: %d\n", calcular_pontuacao(mao_jogador, tamanho_jogador));
+
+            if (calcular_pontuacao(mao_jogador, tamanho_jogador) > MAX_SCORE) {
+                printf("Você ultrapassou 21. O dealer venceu!\n");
+                return 0;
+            }
+        } else {
+            break;
+        }
+    }
+
+    // Turno do dealer
+    printf("Turno do dealer...\n");
+    int pontuacao_dealer = calcular_pontuacao(mao_dealer, tamanho_dealer);
+    while (pontuacao_dealer < DEALER_STOP) {
+        // O dealer utiliza busca em profundidade para decidir
+        int melhor_pontuacao = busca_profundidade(mao_dealer, tamanho_dealer, cartas_restantes, n_cartas, DEALER_STOP);
+
+        // Dealer decide comprar
+        if (melhor_pontuacao > pontuacao_dealer && melhor_pontuacao <= MAX_SCORE) {
+            int carta = cartas_restantes[rand() % n_cartas];
+            mao_dealer[tamanho_dealer++] = carta;
+            printf("Dealer comprou: %d\n", carta);
+            pontuacao_dealer = calcular_pontuacao(mao_dealer, tamanho_dealer);
+        } else {
+            break;
+        }
+    }
+
+    // Resultados finais
+    printf("Sua pontuação final: %d\n", calcular_pontuacao(mao_jogador, tamanho_jogador));
+    printf("Pontuação final do dealer: %d\n", pontuacao_dealer);
+
+    if (pontuacao_dealer > MAX_SCORE || calcular_pontuacao(mao_jogador, tamanho_jogador) > pontuacao_dealer) {
+        printf("Você venceu!\n");
+    } else if (calcular_pontuacao(mao_jogador, tamanho_jogador) == pontuacao_dealer) {
+        printf("Empate!\n");
+    } else {
+        printf("O dealer venceu!\n");
+    }
+
+    return 0;
+}
